@@ -1,0 +1,47 @@
+# Python caches & build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Local llama.cpp binaries and test exports
+bin/
+export/
+
+# Large model weights & checkpoints (hosted on obstudio.org/tot-360m/)
+models/**/*.gguf
+models/**/*.pt
+models/**/*.bin
+models/**/*.safetensors
+*.gguf
+*.pt
+
+# Packed binary shards & raw corpora (keep manifests and provenance notes)
+data/shards/
+data/*.jsonl
+tokenizer/output/
+tokenizer/test_output/
+tokenizer/production/held_out_eval.jsonl
+
+# Private Kaggle runner metadata/notebooks, QA scratch outputs, and internal notes
+kaggle/
+qa/
+tools/codex_*.py
+ANTIGRAVITY-*.md
+AWS-*.md
+COORDINATION-HANDOFF.md
+DATA-PIPELINE-REVIEW.md
+EXPORT-RECOVERY-REVIEW.md
+GPU-QUALIFICATION-REVIEW.md
+NEXT-SESSION-HANDOFF.md
+PROJECT-INTRODUCTION.md
+REVIEW-FROM-CODEX.md
+TPU-RUNNER-REVIEW.md
+TRAINING-STATUS-*.md
+V7-CHECKPOINT-RECOVERY-REVIEW.md
+XLA-RUNTIME-NOTES.md

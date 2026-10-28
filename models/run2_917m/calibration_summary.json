@@ -1,0 +1,48 @@
+{
+  "status": "COMPLETED",
+  "global_step": 56058,
+  "total_valid_targets": 917557344,
+  "tokens_trained_this_run": 511876464,
+  "final_loss": 2.4897,
+  "total_session_seconds": 31048.77,
+  "compilation_seconds": 125.92,
+  "steady_state_targets_per_sec": 16591.9,
+  "end_to_end_targets_per_sec": 16486.2,
+  "checkpoints_saved": 33,
+  "final_checkpoint_path": "/kaggle/working/checkpoints/bulk_b2/tot_360m_calibration_final.pt",
+  "final_cursor": {
+    "0": {
+      "shard_idx": 6,
+      "seq_offset": 5180
+    },
+    "1": {
+      "shard_idx": 6,
+      "seq_offset": 5180
+    },
+    "2": {
+      "shard_idx": 6,
+      "seq_offset": 5180
+    },
+    "3": {
+      "shard_idx": 6,
+      "seq_offset": 5180
+    },
+    "4": {
+      "shard_idx": 6,
+      "seq_offset": 5180
+    },
+    "5": {
+      "shard_idx": 6,
+      "seq_offset": 5180
+    },
+    "6": {
+      "shard_idx": 6,
+      "seq_offset": 5180
+    },
+    "7": {
+      "shard_idx": 6,
+      "seq_offset": 5180
+    }
+  },
+  "config_fingerprint": "63a4ff64f7d529948eb53e24"
+}

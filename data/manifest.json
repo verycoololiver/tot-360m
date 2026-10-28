@@ -1,0 +1,183 @@
+{
+  "timestamp": "2026-10-09T07:34:20Z",
+  "tokenizer_json_sha256": "1ebc8d7aab0e6d2d12a6b4da34fcf6d84f136dcad0c6c1a66e600a3d48b9dba9",
+  "vocab_size": 32000,
+  "dtype": "uint16",
+  "bytes_per_token": 2,
+  "bytes_per_seq": 2048,
+  "seq_len": 1024,
+  "num_shards": 16,
+  "total_sequences": 7038,
+  "total_tokens": 7206912,
+  "shards": [
+    {
+      "name": "shards/shard_000.bin",
+      "filename": "shard_000.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "fd224001628d0788ff2755cdcf26033499d0f40b84b5796804148b0523579f6b"
+    },
+    {
+      "name": "shards/shard_001.bin",
+      "filename": "shard_001.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "138a151004b2bedef1bfccd4907c0a9784c3a73af822068eaf3a3b99e71c547b"
+    },
+    {
+      "name": "shards/shard_002.bin",
+      "filename": "shard_002.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "321c3192bb4a1428e20eecd3e32eaf7dc0a048043bc4118e675a9f072bfa20db"
+    },
+    {
+      "name": "shards/shard_003.bin",
+      "filename": "shard_003.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "18bc8512f76bf8895f908cbf5fb723849f8fdf37f9e2b1584ad426962770f205"
+    },
+    {
+      "name": "shards/shard_004.bin",
+      "filename": "shard_004.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "7fab345cd57aa98759bd086a8f832a28c6b877423ed2368017cb0ecaed184ad9"
+    },
+    {
+      "name": "shards/shard_005.bin",
+      "filename": "shard_005.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "9147cf5fcdf143695859672e656b68858f20963153374d3f6b8ba8195a2322ed"
+    },
+    {
+      "name": "shards/shard_006.bin",
+      "filename": "shard_006.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "8cf537c889b795a0901fa5ab96a151f1b95c568c1bd0be1f50ac0671241deccf"
+    },
+    {
+      "name": "shards/shard_007.bin",
+      "filename": "shard_007.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "4560c84f1f0d77528341bf95aecee294c71f2a7cb2e82a7c656fde7c0ae487a5"
+    },
+    {
+      "name": "shards/shard_008.bin",
+      "filename": "shard_008.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "6ea1c2ac121fd306bc1daacc282063d15496c45a024860e93b4cf144a3632ac9"
+    },
+    {
+      "name": "shards/shard_009.bin",
+      "filename": "shard_009.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "c62ab6ef4a30271aef26f7279fe2df67d2ed03899c6b2c3871ac7e00c2cbe430"
+    },
+    {
+      "name": "shards/shard_010.bin",
+      "filename": "shard_010.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "e21027d7bde43020dee796a402d3bf62c4b823b4ed7eb25b34113fd4da20710c"
+    },
+    {
+      "name": "shards/shard_011.bin",
+      "filename": "shard_011.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "58692d8e6e4127a6da7429d1dd1e21fe4a82a9623ccfbfa6d06d236af5ff13b2"
+    },
+    {
+      "name": "shards/shard_012.bin",
+      "filename": "shard_012.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "39ffefc228e3358fcf5cfe1793aa3dfc8f5d9ac9acb1ddca1d24400e69b43116"
+    },
+    {
+      "name": "shards/shard_013.bin",
+      "filename": "shard_013.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "693da0ae7d5eaf4c18c2fda00e52b391f8726ee969c1b819e8df46ee862156a8"
+    },
+    {
+      "name": "shards/shard_014.bin",
+      "filename": "shard_014.bin",
+      "seq_count": 439,
+      "token_count": 449536,
+      "byte_size": 899072,
+      "sha256": "34379acbb38fd7c6e5c4343b7c612c7275867b254713606656f83a2633991594"
+    },
+    {
+      "name": "shards/shard_015.bin",
+      "filename": "shard_015.bin",
+      "seq_count": 453,
+      "token_count": 463872,
+      "byte_size": 927744,
+      "sha256": "076eb62720002e792d6e18531151d6a5d5ab0bae4d124a385cdfecf49452d451"
+    }
+  ],
+  "corpus_jsonl": {
+    "path": "production_corpus.jsonl",
+    "sha256": "81d680336d36dc3e168ac5e05f0ee757ea37fa732a7a952018b76910170f7223",
+    "total_documents": 4959
+  },
+  "held_out_eval": {
+    "path": "tot_360m\\tokenizer\\production\\held_out_eval.jsonl",
+    "sha256": "2d51aeae342a886e60d93f25332fa240d725a52a69ca1c5f4fb8943d5365c7a3",
+    "doc_count": 100
+  },
+  "sources": {
+    "fineweb_edu": {
+      "dataset": "HuggingFaceFW/fineweb-edu",
+      "revision": "87f09149ef4734204d70ed1d046ddc9ca3f2b8f9",
+      "license": "ODC-By",
+      "filter": "score >= 3.0 or int_score >= 3"
+    },
+    "permissive_code": {
+      "dataset": "codeparrot/github-code-clean",
+      "revision": "c48d40f9e70f0196f8236901ee35807f7d6c44c0",
+      "allowed_licenses": [
+        "apache-2.0",
+        "bsd-2-clause",
+        "bsd-3-clause",
+        "cc0-1.0",
+        "isc",
+        "mit",
+        "unlicense"
+      ]
+    },
+    "korean_wikipedia": {
+      "dataset": "wikimedia/wikipedia (20231101.ko)",
+      "revision": "b04c8d1ceb2f5cd4588862100d08de323dccfbaa",
+      "license": "CC-BY-SA-3.0 / GFDL",
+      "provenance": "Wikimedia Foundation Wikipedia dump (ko) 20231101"
+    },
+    "iris_companion": {
+      "dataset": "authored/ob_studio",
+      "license": "Proprietary / OB Studio internal"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tot-360m"
+version = "0.3.0.dev0"
+description = "Tot-360M: A 345M-parameter language model being pretrained from scratch on Kaggle TPU v5e-8 (not fully pretrained yet) with native llama.cpp Qwen3 GGUF export."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+authors = [
+  { name = "Oliver (OB Studio)" }
+]
+dependencies = [
+  "torch>=2.4.0",
+  "numpy>=1.26.0",
+  "tokenizers>=0.19.0",
+  "gguf>=0.10.0",
+]
+
+[project.urls]
+Homepage = "https://obstudio.org/tot-360m/"
+Documentation = "https://obstudio.org/tot-360m/"
+Repository = "https://github.com/verycoololiver/tot-360m"
+
+[tool.setuptools.package-dir]
+tot_360m = "."
+
+[tool.setuptools.packages.find]
+where = [".."]
+include = ["tot_360m*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,69 @@
+{
+  "timestamp": "2026-10-09T06:52:01Z",
+  "vocab_size": 32000,
+  "target_vocab_size": 32000,
+  "special_tokens": {
+    "<|endoftext|>": 0,
+    "<|im_start|>": 1,
+    "<|im_end|>": 2,
+    "<unk>": 3,
+    "<pad>": 4
+  },
+  "pre_tokenizer": "gpt-2 (ByteLevel add_prefix_space=False, use_regex=True)",
+  "llama_cpp_pre_type": "gpt-2",
+  "llama_cpp_pinned_release": "b11515",
+  "llama_cpp_pinned_commit": "3d65c90d04d337e88f2b1f7f0061f40a5324e662",
+  "sample_seed": 20261009,
+  "tokenizers_version": "0.23.2",
+  "python_version": "3.14.4 (tags/v3.14.4:23116f9, Apr  7 2026, 14:10:54) [MSC v.1944 64 bit (AMD64)]",
+  "training_duration_seconds": 15.9,
+  "total_training_docs": 5204,
+  "total_training_utf8_bytes": 29694078,
+  "sources": {
+    "fineweb_edu": {
+      "source": "HuggingFaceFW/fineweb-edu (sample-10BT, train split)",
+      "license": "ODC-By",
+      "filter": "score >= 3.0 or int_score >= 3",
+      "doc_count": 3099,
+      "utf8_bytes": 15004462
+    },
+    "permissive_code": {
+      "source": "codeparrot/github-code-clean (configs: all-mit, all-apache-2.0, train split)",
+      "allowed_licenses": [
+        "apache-2.0",
+        "bsd-2-clause",
+        "bsd-3-clause",
+        "cc0-1.0",
+        "isc",
+        "mit",
+        "unlicense"
+      ],
+      "license_distribution": {
+        "mit": 721,
+        "apache-2.0": 563
+      },
+      "rejected_non_permissive_docs": 0,
+      "doc_count": 1284,
+      "utf8_bytes": 8035028
+    },
+    "korean_corpus": {
+      "source": "wikimedia/wikipedia (20231101.ko, train split)",
+      "provenance": "Wikimedia Foundation Wikipedia dump (ko) 20231101",
+      "license": "Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0) and GFDL",
+      "doc_count": 671,
+      "utf8_bytes": 7000423
+    },
+    "persona_templates": {
+      "source": "Authored Tot companion dialogue templates",
+      "template_count": 5,
+      "copies_in_training": 50
+    }
+  },
+  "held_out_evaluation": {
+    "path": "tot_360m\\tokenizer\\production\\held_out_eval.jsonl",
+    "doc_count": 100,
+    "sha256": "2d51aeae342a886e60d93f25332fa240d725a52a69ca1c5f4fb8943d5365c7a3"
+  },
+  "tokenizer_json_sha256": "1ebc8d7aab0e6d2d12a6b4da34fcf6d84f136dcad0c6c1a66e600a3d48b9dba9",
+  "vocab_json_sha256": "ae69ffa57f4de98b6514a4047f93bb1321561c855f0581e70126bb637f434398"
+}
