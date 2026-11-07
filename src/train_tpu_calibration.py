@@ -466,7 +466,13 @@ def train_worker(rank: int, args: argparse.Namespace, t_session_start: float):
         # and recompute closed-form cosine LR at start_step so PyTorch's recursive step() does not stay pinned near eta_min.
         remaining_tokens_at_start = max(0, args.max_tokens - tokens_seen)
         desired_total_steps = start_step + math.ceil(remaining_tokens_at_start / max(targets_per_optimizer_step, 1))
-        if getattr(scheduler, "T_max", 0) < desired_total_steps:
+        if getattr(args, "reset_lr_schedule", False):
+            phase_steps = max(100, math.ceil(remaining_tokens_at_start / max(targets_per_optimizer_step, 1)))
+            for group in optimizer.param_groups:
+                group["lr"] = args.lr
+                group["initial_lr"] = args.lr
+            scheduler = CosineAnnealingLR(optimizer, T_max=phase_steps, eta_min=args.lr * 0.1)
+        elif getattr(scheduler, "T_max", 0) < desired_total_steps:
             scheduler.T_max = max(desired_total_steps, 100)
             new_lrs = []
             for base_lr, group in zip(scheduler.base_lrs, optimizer.param_groups):
@@ -605,8 +611,14 @@ def train_worker(rank: int, args: argparse.Namespace, t_session_start: float):
                 input_ids = torch.stack(batch_buffer, dim=0).to(device)
                 batch_buffer.clear()
 
-                # Autoregressive next-token prediction
+                # Autoregressive next-token prediction with optional NCM conditioning corruption (arXiv:2610.14162 Sec 3.2)
                 labels = input_ids.clone()
+                corrupt_prob = float(getattr(args, "input_corrupt_prob", 0.0) or 0.0)
+                if corrupt_prob > 0.0:
+                    corrupt_mask = (torch.rand(input_ids.shape, device=device, dtype=torch.float32) < corrupt_prob) & (input_ids >= 4)
+                    noise_ids = torch.randint(4, config.vocab_size, input_ids.shape, device=device, dtype=input_ids.dtype)
+                    input_ids = torch.where(corrupt_mask, noise_ids, input_ids)
+                    del corrupt_mask, noise_ids
 
                 # Forward pass with finite loss check and BF16 autocast support
                 autocast_device = "xla" if HAS_XLA else ("cuda" if torch.cuda.is_available() else "cpu")
@@ -860,6 +872,8 @@ def main():
     parser.add_argument("--skip-checksum-verify", action="store_true", help="Skip checking shard SHA256 checksums at startup")
     parser.add_argument("--skip-identity-verify", action="store_true", help="Allow warm-starting across different shard packs or batch sizes while still checking config_fingerprint")
     parser.add_argument("--reset-data-cursor", action="store_true", help="Reset shard/sequence cursor to (0, 0) when starting a new bulk shard pack from a prior checkpoint")
+    parser.add_argument("--reset-lr-schedule", action="store_true", help="Start a fresh cosine LR cycle over the current run while keeping AdamW moments")
+    parser.add_argument("--input-corrupt-prob", type=float, default=0.0, help="NCM-inspired conditioning corruption rate (e.g. 0.03) on non-special input tokens while keeping target labels clean")
     args = parser.parse_args()
 
     if HAS_XLA:

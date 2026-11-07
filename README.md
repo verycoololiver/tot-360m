@@ -2,11 +2,11 @@
 
 [![Project Page](https://img.shields.io/badge/Project_Page-obstudio.org%2Ftot--360m-2563eb)](https://obstudio.org/tot-360m/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-green.svg)](./LICENSE)
-[![Status: Pretraining in Progress](https://img.shields.io/badge/Status-Not_Fully_Pretrained_Yet_(1.43B_%2F_7.2B_Tokens)-amber)](https://obstudio.org/tot-360m/)
+[![Status: Pretraining in Progress](https://img.shields.io/badge/Status-Pretraining_in_Progress_(2.32B_%2F_7.2B_Tokens)-amber)](https://obstudio.org/tot-360m/)
 
-> **⚠️ Important Status Notice — Not Fully Pretrained Yet:**
-> **Tot-360M is still in the middle of pretraining and is NOT a finished or instruction-tuned model yet.**
-> So far, it has trained on **1,430,481,360 tokens** (~20% of its ~7.2B-token Chinchilla pretraining target) across three Kaggle TPU v5e-8 runs. No supervised fine-tuning (SFT), chat template alignment, or post-training has been performed yet. Early `.gguf` checkpoints published during pretraining are raw, unfinished base snapshots that only continue text/code and will output strange or repetitive completions if prompted like a chatbot.
+> **⚠️ Important Status Notice — Pretraining in Progress:**
+> **Tot-360M is currently in bulk pretraining (`2,322,199,656` tokens completed across 6 batches; Batch 7 queued for `~2.90B` tokens).**
+> So far, it has trained on **2,322,199,656 tokens** (~32.3% of its ~7.2B-token Chinchilla pretraining target) across Kaggle TPU v5e-8 (`seq_len=1024`) and 2× T4 (`seq_len=4096`) runs, plus initial SFT branch probes (`sft-v1`, `sft-v2`). Early `.gguf` checkpoints published during pretraining are raw, unfinished base snapshots.
 
 **Live status, interactive loss curve, and intermediate `.gguf` snapshots:** **[https://obstudio.org/tot-360m/](https://obstudio.org/tot-360m/)**
 
@@ -14,7 +14,7 @@
 
 ## Overview
 
-**Tot-360M** is a **345,359,296-parameter** (`314,639,296` non-embedding) bilingual (English / Korean) and code language model being trained from random weight initialization on 8-core **Kaggle Cloud TPU v5e-8** sessions. It is designed to eventually serve as the local, offline model inside **[Tot](https://obstudio.org/tools/tot/)** on everyday laptops and Raspberry Pi hardware.
+**Tot-360M** is a **345,359,296-parameter** (`314,639,296` non-embedding) multilingual (English / Korean / Spanish) and code language model being trained from random weight initialization on 8-core **Kaggle Cloud TPU v5e-8** and **2× T4 GPU** sessions. It is designed to eventually serve as the local, offline model inside **[Tot](https://obstudio.org/tools/tot/)** on everyday laptops and Raspberry Pi hardware.
 
 Rather than fine-tuning an existing pretrained model, Tot-360M starts from scratch with its own **32,000-token byte-level BPE tokenizer** while adopting a tensor and metadata layout compatible with stock `llama.cpp` (`qwen3` architecture tag) so exported `.gguf` files run natively in `llama.cpp`, Ollama, and LM Studio without custom C++ patches.
 
@@ -40,23 +40,28 @@ Defined in [`config.py`](./config.py) and implemented in [`src/model.py`](./src/
 | **FFN intermediate (`intermediate_size`)** | `2,560` (SwiGLU MLP, $8/3\times$ expansion) |
 | **Attention heads** | `15` query heads / `5` KV heads (3:1 GQA, `head_dim = 64`) |
 | **QK-Norm** | Shared 64-element RMSNorm vectors per layer (`q_norm`, `k_norm`) |
-| **Positional encoding** | NeoX split-half RoPE ($\theta = 10,000.0$, context table `2,048`) |
+| **Positional encoding** | NeoX split-half RoPE ($\theta = 10,000.0$, context table `4,096`) |
 | **Normalization** | Pre-RMSNorm ($\epsilon = 10^{-6}$) |
 | **Vocabulary size** | `32,000` (custom byte-level BPE, [`tokenizer/production/`](./tokenizer/production/)) |
-| **Training sequence length** | `1,024` packed `uint16` tokens (`16,368` target tokens/step across 8 TPU cores) |
-| **Auxiliary stabilization** | Logit z-loss ($\lambda = 10^{-4}$) |
+| **Training sequence length** | `1,024` (TPU v5e-8) / `4,096` (2× T4 long-context interleaved batches) |
+| **Auxiliary stabilization** | Logit z-loss ($\lambda = 10^{-4}$) + optional NCM conditioning corruption (`--input-corrupt-prob`) |
 
 ---
 
-## In-Progress Pretraining Status (1.43B / 7.2B Target Tokens)
+## In-Progress Pretraining Status (2.32B / 7.2B Target Tokens)
 
-Pretraining is still underway on Kaggle TPU v5e-8 (`bfloat16` mixed precision with `fp32` master weights and AdamWoptimizer states). Intermediate checkpoints are published under Apache-2.0 at **[obstudio.org/tot-360m](https://obstudio.org/tot-360m/)** to document progress:
+Pretraining is underway on Kaggle TPU v5e-8 (`bfloat16` mixed precision with `fp32` master weights and AdamW optimizer states) and 2× T4 (`4,096` context). Intermediate checkpoints are published under Apache-2.0 at **[obstudio.org/tot-360m](https://obstudio.org/tot-360m/)**:
 
-| Run | Optimizer Steps | Cumulative Tokens | 2,000-Step Window Avg Loss | Throughput | Intermediate GGUF Snapshots (Unfinished Pretraining) |
+| Run | Optimizer Steps | Cumulative Tokens | Loss (2k Avg / Final) | Throughput | Notes / Snapshots |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Run 1 (Batch 1)** | `439 → 24,785` | `405,680,880` | `4.74 → 2.73` | `~17.7k tok/s` | [Q4_K_M (241 MiB)](https://obstudio.org/downloads/tot_360m_run1_q4_k_m.gguf) · [Q8_0 (351 MiB)](https://obstudio.org/downloads/tot_360m_run1_q8_0.gguf) |
-| **Run 2 (Batch 2)** | `24,785 → 56,058` | `917,557,344` | `3.18 → 2.81` | `~17.6k tok/s` | [Q4_K_M (241 MiB)](https://obstudio.org/downloads/tot_360m_run2_q4_k_m.gguf) · [Q8_0 (351 MiB)](https://obstudio.org/downloads/tot_360m_run2_q8_0.gguf) |
-| **Run 3 (Batch 3)** | `56,058 → 87,395` | `1,430,481,360` | `2.61 → 1.93–2.20` | `~17.5k tok/s` | [Q4_K_M (241 MiB)](https://obstudio.org/downloads/tot_360m_run3_q4_k_m.gguf) · [Q8_0 (351 MiB)](https://obstudio.org/downloads/tot_360m_run3_q8_0.gguf) |
+| **Run 1 (Batch 1, TPU v5e-8)** | `439 → 24,785` | `405,680,880` | `4.74 → 2.73` | `~17.7k tok/s` | [Q4_K_M (241 MiB)](https://obstudio.org/downloads/tot_360m_run1_q4_k_m.gguf) · [Q8_0 (351 MiB)](https://obstudio.org/downloads/tot_360m_run1_q8_0.gguf) |
+| **Run 2 (Batch 2, TPU v5e-8)** | `24,785 → 56,058` | `917,557,344` | `3.18 → 2.81` | `~17.6k tok/s` | [Q4_K_M (241 MiB)](https://obstudio.org/downloads/tot_360m_run2_q4_k_m.gguf) · [Q8_0 (351 MiB)](https://obstudio.org/downloads/tot_360m_run2_q8_0.gguf) |
+| **Run 3 (Batch 3, TPU v5e-8)** | `56,058 → 87,395` | `1,430,481,360` | `2.61 → 2.20` | `~17.5k tok/s` | [Q4_K_M (241 MiB)](https://obstudio.org/downloads/tot_360m_run3_q4_k_m.gguf) · [Q8_0 (351 MiB)](https://obstudio.org/downloads/tot_360m_run3_q8_0.gguf) |
+| **Run 3.2 (Batch 3-p2, TPU v5e-8)** | `87,395 → 95,816` | `1,568,316,288` | `final 2.2974` | `~17.1k tok/s` | Completed remaining Batch 3 shards |
+| **Run 4 (Batch 4, 2× T4 4K)** | `95,816 → 101,591` | `1,662,910,788` | `final 2.1322` | `~2.3k tok/s` | First 4,096-context expansion batch |
+| **Run 5 (Batch 5, 2× T4 4K)** | `101,591 → 109,958` | `1,799,962,248` | `final 1.5644` | `~3.4k tok/s` | 4,096-context + HTML5 games & bilingual ChatML |
+| **Run 6 (Batch 6, TPU v5e-8)** | `109,958 → 141,864` | `2,322,199,656` | `2.11 avg / 1.3729 final` | `~17.1k tok/s` | `+522.2M` unseen tokens (`1.82` min 2k-step avg) |
+| **Run 7 (Batch 7, TPU v5e-8)** | `141,864 → ~177,000` | `~2,900,000,000` | *Queued on TPU* | — | `~595M` unseen FineWeb-Edu, Wiki, KO, Code, SmolTalk + HTML5 |
 
 > **Note on running intermediate `.gguf` files:** Because pretraining is not finished yet and SFT has not started, these checkpoints act strictly as raw document/code completers:
 > ```bash

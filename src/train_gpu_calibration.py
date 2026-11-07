@@ -474,8 +474,15 @@ def run(args):
                     no_sync = model.no_sync() if world > 1 and micro + 1 < len(batches) else contextlib.nullcontext()
                     with no_sync:
                         dtype = torch.float16 if args.precision == "fp16" else torch.bfloat16
+                        corrupt_prob = float(getattr(args, "input_corrupt_prob", 0.0) or 0.0)
+                        if corrupt_prob > 0.0:
+                            corrupt_mask = (torch.rand(batch.shape, device=device, dtype=torch.float32) < corrupt_prob) & (batch >= 4)
+                            noise_ids = torch.randint(4, cfg.vocab_size, batch.shape, device=device, dtype=batch.dtype)
+                            inputs = torch.where(corrupt_mask, noise_ids, batch)
+                        else:
+                            inputs = batch
                         with torch.autocast(device_type=device.type, dtype=dtype, enabled=args.precision != "fp32"):
-                            _, loss = model(input_ids=batch, labels=batch)
+                            _, loss = model(input_ids=inputs, labels=batch)
                         scaler.scale(loss.float() / args.grad_accum_steps).backward()
                         loss_sum += loss.detach().float() / args.grad_accum_steps
                 if not rank_value(torch.isfinite(loss_sum).item(), device, world):
@@ -573,6 +580,7 @@ def parse_args():
     p.add_argument("--allow-bulk-manifest", action="store_true", help="Allow bulk uint16 manifests and full session bounds")
     p.add_argument("--reset-data-cursor", action="store_true", help="Reset sequence cursor to 0 when starting a new bulk shard pack")
     p.add_argument("--skip-checksum-verify", action="store_true", help="Skip full-file SHA256/memmap scan on pre-verified bulk shards")
+    p.add_argument("--input-corrupt-prob", type=float, default=0.0, help="NCM-inspired conditioning corruption rate (e.g. 0.03) on non-special input tokens while keeping target labels clean")
     args = p.parse_args()
     for name in ("batch_size", "grad_accum_steps", "max_steps", "schedule_steps", "max_tokens", "max_seconds"):
         if getattr(args, name) <= 0:

@@ -216,15 +216,22 @@ if __name__ == "__main__":
     parser.add_argument("--tokenizer", type=str, default="tot_360m/tokenizer/production/tokenizer.json", help="Path to tokenizer.json")
     parser.add_argument("--out", type=str, default="tot_360m/export/tot_mini.gguf")
     parser.add_argument("--dtype", choices=["f32", "f16"], default="f32")
+    parser.add_argument("--context-length", type=int, default=None, help="Override exported GGUF context_length (e.g., 4096)")
     parser.add_argument("--materialize-output", action="store_true")
     parser.add_argument("--allow-vocab-mismatch", action="store_true", help="Permit vocab size mismatch for test fixtures only")
     args = parser.parse_args()
 
     cfg = TotMiniConfig() if args.config == "mini" else Tot360MConfig()
+    if args.context_length is not None and args.context_length > 0:
+        cfg.max_position_embeddings = args.context_length
     m = TotForCausalLM(cfg)
     if args.checkpoint:
         import gc
         ckpt = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
+        if args.context_length is None and isinstance(ckpt, dict):
+            ckpt_max_pos = ckpt.get("identity", {}).get("config", {}).get("max_position_embeddings")
+            if isinstance(ckpt_max_pos, int) and ckpt_max_pos > cfg.max_position_embeddings:
+                cfg.max_position_embeddings = ckpt_max_pos
         state = ckpt.pop("model_state") if isinstance(ckpt, dict) and "model_state" in ckpt else ckpt
         del ckpt
         gc.collect()

@@ -169,9 +169,17 @@ def load_checkpoint(
             expected_fp = get_config_fingerprint(config, opt_name)
             actual_fp = checkpoint.get("config_fingerprint")
             if actual_fp != expected_fp:
-                raise ValueError(
-                    f"Checkpoint configuration fingerprint mismatch! Expected {expected_fp}, found {actual_fp}"
-                )
+                import copy as _copy
+                legacy_match = False
+                for legacy_pos in (2048, 4096):
+                    alt_cfg = _copy.replace(config, max_position_embeddings=legacy_pos)
+                    if actual_fp == get_config_fingerprint(alt_cfg, opt_name):
+                        legacy_match = True
+                        break
+                if not legacy_match:
+                    raise ValueError(
+                        f"Checkpoint configuration fingerprint mismatch! Expected {expected_fp}, found {actual_fp}"
+                    )
 
     # 1b. Identity metadata validation (tokenizer, manifest, topology, optimizer)
     if expected_identity is not None:

@@ -10,7 +10,7 @@ class Tot360MConfig:
     - Tied 32k word embeddings.
     - SwiGLU 8/3 expansion ratio (2560).
     - 3:1 GQA ratio (15 query heads, 5 key-value heads, head dimension 64).
-    - RoPE base theta = 10,000 for 2,048 context.
+    - RoPE base theta = 10,000 for 4,096 context.
     """
     vocab_size: int = 32000
     hidden_size: int = 960
@@ -21,7 +21,7 @@ class Tot360MConfig:
     head_dim: int = 64             # 960 / 15 = 64
     rms_norm_eps: float = 1e-6
     rope_theta: float = 10000.0
-    max_position_embeddings: int = 2048
+    max_position_embeddings: int = 4096
     tie_word_embeddings: bool = True
     use_qk_norm: bool = True
     z_loss_weight: float = 1e-4
