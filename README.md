@@ -2,11 +2,11 @@
 
 [![Project Page](https://img.shields.io/badge/Project_Page-obstudio.org%2Ftot--360m-2563eb)](https://obstudio.org/tot-360m/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-green.svg)](./LICENSE)
-[![Status: Pretraining in Progress](https://img.shields.io/badge/Status-Pretraining_in_Progress_(2.32B_%2F_7.2B_Tokens)-amber)](https://obstudio.org/tot-360m/)
+[![Status: Pretraining in Progress](https://img.shields.io/badge/Status-Pretraining_in_Progress_(2.84B_%2F_7.2B_Tokens)-amber)](https://obstudio.org/tot-360m/)
 
 > **⚠️ Important Status Notice — Pretraining in Progress:**
-> **Tot-360M is currently in bulk pretraining (`2,322,199,656` tokens completed across 6 batches; Batch 7 queued for `~2.90B` tokens).**
-> So far, it has trained on **2,322,199,656 tokens** (~32.3% of its ~7.2B-token Chinchilla pretraining target) across Kaggle TPU v5e-8 (`seq_len=1024`) and 2× T4 (`seq_len=4096`) runs, plus initial SFT branch probes (`sft-v1`, `sft-v2`). Early `.gguf` checkpoints published during pretraining are raw, unfinished base snapshots.
+> **Tot-360M is currently in bulk pretraining (`2,839,362,984` tokens completed across 7 batches; Batch 8 queued for `~3.40B` tokens).**
+> So far, it has trained on **2,839,362,984 tokens** (~39.4% of its ~7.2B-token Chinchilla pretraining target) across Kaggle TPU v5e-8 (`seq_len=1024`) and 2× T4 (`seq_len=4096`) runs, plus initial SFT branch probes (`sft-v1`, `sft-v2`). Early `.gguf` checkpoints published during pretraining are raw, unfinished base snapshots.
 
 **Live status, interactive loss curve, and intermediate `.gguf` snapshots:** **[https://obstudio.org/tot-360m/](https://obstudio.org/tot-360m/)**
 
@@ -48,7 +48,7 @@ Defined in [`config.py`](./config.py) and implemented in [`src/model.py`](./src/
 
 ---
 
-## In-Progress Pretraining Status (2.32B / 7.2B Target Tokens)
+## In-Progress Pretraining Status (2.84B / 7.2B Target Tokens)
 
 Pretraining is underway on Kaggle TPU v5e-8 (`bfloat16` mixed precision with `fp32` master weights and AdamW optimizer states) and 2× T4 (`4,096` context). Intermediate checkpoints are published under Apache-2.0 at **[obstudio.org/tot-360m](https://obstudio.org/tot-360m/)**:
 
@@ -61,7 +61,8 @@ Pretraining is underway on Kaggle TPU v5e-8 (`bfloat16` mixed precision with `fp
 | **Run 4 (Batch 4, 2× T4 4K)** | `95,816 → 101,591` | `1,662,910,788` | `final 2.1322` | `~2.3k tok/s` | First 4,096-context expansion batch |
 | **Run 5 (Batch 5, 2× T4 4K)** | `101,591 → 109,958` | `1,799,962,248` | `final 1.5644` | `~3.4k tok/s` | 4,096-context + HTML5 games & bilingual ChatML |
 | **Run 6 (Batch 6, TPU v5e-8)** | `109,958 → 141,864` | `2,322,199,656` | `2.11 avg / 1.3729 final` | `~17.1k tok/s` | `+522.2M` unseen tokens (`1.82` min 2k-step avg) |
-| **Run 7 (Batch 7, TPU v5e-8)** | `141,864 → ~177,000` | `~2,900,000,000` | *Queued on TPU* | — | `~595M` unseen FineWeb-Edu, Wiki, KO, Code, SmolTalk + HTML5 |
+| **Run 7 (Batch 7, TPU v5e-8)** | `141,864 → 173,460` | `2,839,362,984` | `final 1.0576` | `~16.9k tok/s` | `+517.2M` unseen tokens (`30,725s` TPU v5e-8) |
+| **Run 8 (Batch 8, TPU v5e-8)** | `173,460 → ~205,000` | `~3,360,000,000` | *Queued on TPU* | — | `~600M` unseen shards + NCM `--input-corrupt-prob 0.03` |
 
 > **Note on running intermediate `.gguf` files:** Because pretraining is not finished yet and SFT has not started, these checkpoints act strictly as raw document/code completers:
 > ```bash
