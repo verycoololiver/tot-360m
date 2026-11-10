@@ -124,7 +124,7 @@ def save_checkpoint(
         xm.save(payload, temp_path, master_only=True, global_master=True)
         if xm.is_master_ordinal(local=False):
             os.replace(temp_path, checkpoint_path)
-        xm.rendezvous(f"checkpoint-written-{step}")
+        xm.rendezvous(f"checkpoint-written-{step}-{os.path.basename(checkpoint_path)}")
     else:
         torch.save(payload, temp_path)
         os.replace(temp_path, checkpoint_path)
@@ -169,10 +169,10 @@ def load_checkpoint(
             expected_fp = get_config_fingerprint(config, opt_name)
             actual_fp = checkpoint.get("config_fingerprint")
             if actual_fp != expected_fp:
-                import copy as _copy
+                import dataclasses
                 legacy_match = False
                 for legacy_pos in (2048, 4096):
-                    alt_cfg = _copy.replace(config, max_position_embeddings=legacy_pos)
+                    alt_cfg = dataclasses.replace(config, max_position_embeddings=legacy_pos)
                     if actual_fp == get_config_fingerprint(alt_cfg, opt_name):
                         legacy_match = True
                         break

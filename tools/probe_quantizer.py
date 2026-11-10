@@ -15,9 +15,22 @@ DISCLAIMER: This script calculates analytical tensor payloads under the stated u
 It does NOT execute a native llama-quantize binary or measure CPU inference throughput.
 """
 
+import importlib.util
 import os
+from pathlib import Path
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT.parent) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT.parent))
+if "tot_360m" not in sys.modules and not (_REPO_ROOT.parent / "tot_360m").exists():
+    _spec = importlib.util.spec_from_file_location(
+        "tot_360m", _REPO_ROOT / "__init__.py", submodule_search_locations=[str(_REPO_ROOT)]
+    )
+    if _spec and _spec.loader:
+        _mod = importlib.util.module_from_spec(_spec)
+        sys.modules["tot_360m"] = _mod
+        _spec.loader.exec_module(_mod)
 
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
@@ -78,7 +91,7 @@ def extract_tensor_specs_from_model(config) -> List[DynamicTensorSpec]:
 def audit_quantization(candidate_name: str, config):
     print(f"\n{'='*75}")
     print(f"ANALYTICAL QUANTIZATION AUDIT: {candidate_name}")
-    print(f"Reference: llama.cpp commit 09b3fa47d488f28fa8e803c46aa1d4d0398fb914")
+    print("Reference: llama.cpp commit 3d65c90d04d337e88f2b1f7f0061f40a5324e662")
     print(f"{'='*75}")
 
     tensors = extract_tensor_specs_from_model(config)

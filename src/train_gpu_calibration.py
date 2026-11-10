@@ -226,7 +226,7 @@ def write_atomic(path, payload):
     os.replace(temp, path)
 
 
-def load_payload(path, identity, require_scaler, allow_cross_backend=False):
+def load_payload(path, identity, require_scaler, allow_cross_backend=False, relax_schedule_or_data=False):
     payload = torch.load(path, map_location="cpu", weights_only=False)
     if allow_cross_backend and payload.get("version") == 2 and "data_state" in payload:
         data_state = payload["data_state"]
@@ -249,8 +249,15 @@ def load_payload(path, identity, require_scaler, allow_cross_backend=False):
             "scaler_state": payload.pop("scaler_state", None) or {},
             "rank_states": [payload.get("rng_states", {})] * identity["world_size"],
         }
-    if payload.get("format") != "tot-gpu-candidate-v1" or (not allow_cross_backend and payload.get("identity") != identity):
+    if payload.get("format") != "tot-gpu-candidate-v1":
         raise ValueError("GPU checkpoint identity mismatch; cross-backend import is not yet admitted")
+    if not allow_cross_backend:
+        saved_ident = payload.get("identity") or {}
+        if relax_schedule_or_data:
+            if saved_ident.get("architecture") != identity.get("architecture") or saved_ident.get("tokenizer_sha256") != identity.get("tokenizer_sha256"):
+                raise ValueError("GPU checkpoint architecture or tokenizer identity mismatch")
+        elif saved_ident != identity:
+            raise ValueError("GPU checkpoint identity mismatch; cross-backend import is not yet admitted")
     for key in ("model_state", "optimizer_state", "scheduler_state", "rank_states", "cursor", "tokens_seen", "step"):
         if key not in payload or payload[key] is None:
             raise ValueError(f"Required checkpoint state is missing: {key}")
@@ -354,7 +361,14 @@ def run(args):
         allow_cross = getattr(args, "allow_cross_backend", False)
         allow_bulk = getattr(args, "allow_bulk_manifest", False)
         reset_cur = getattr(args, "reset_data_cursor", False)
-        payload = load_payload(args.resume, identity, scaler.is_enabled(), allow_cross_backend=allow_cross)
+        reset_lr = getattr(args, "reset_lr_schedule", False)
+        payload = load_payload(
+            args.resume,
+            identity,
+            scaler.is_enabled(),
+            allow_cross_backend=allow_cross,
+            relax_schedule_or_data=(allow_bulk or reset_cur or reset_lr),
+        )
         if not allow_cross:
             if len(payload["rank_states"]) != world:
                 raise ValueError("Checkpoint rank/cursor/token accounting is inconsistent")
@@ -402,11 +416,36 @@ def run(args):
     output.mkdir(parents=True, exist_ok=True)
     global_batch = world * args.batch_size * args.grad_accum_steps
     step_targets = global_batch * (args.seq_len - 1)
-    if (getattr(args, "allow_bulk_manifest", False) or getattr(args, "allow_cross_backend", False)) and args.schedule_steps <= step:
-        desired_total_steps = step + math.ceil(max(0, args.max_tokens - tokens_seen) / max(step_targets, 1))
-        args.schedule_steps = max(desired_total_steps, step + args.max_steps, 100)
-    if getattr(scheduler, "T_max", 0) < args.schedule_steps:
-        scheduler.T_max = args.schedule_steps
+    if getattr(args, "reset_lr_schedule", False):
+        remaining_targets = max(0, args.max_tokens - tokens_seen)
+        phase_steps = max(100, math.ceil(remaining_targets / max(step_targets, 1)))
+        args.schedule_steps = step + phase_steps
+        for group in optimizer.param_groups:
+            group["lr"] = args.lr
+            group["initial_lr"] = args.lr
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=phase_steps, eta_min=args.lr * 0.1)
+    else:
+        if (getattr(args, "allow_bulk_manifest", False) or getattr(args, "allow_cross_backend", False)) and args.schedule_steps <= step:
+            desired_total_steps = step + math.ceil(max(0, args.max_tokens - tokens_seen) / max(step_targets, 1))
+            args.schedule_steps = max(desired_total_steps, step + args.max_steps, 100)
+        if getattr(scheduler, "T_max", 0) < args.schedule_steps:
+            scheduler.T_max = args.schedule_steps
+            new_lrs = []
+            for base_lr, group in zip(scheduler.base_lrs, optimizer.param_groups):
+                if scheduler.last_epoch <= 0:
+                    lr_val = float(base_lr)
+                elif scheduler.last_epoch >= scheduler.T_max:
+                    lr_val = float(scheduler.eta_min)
+                else:
+                    lr_val = float(
+                        scheduler.eta_min
+                        + (base_lr - scheduler.eta_min)
+                        * (1.0 + math.cos(math.pi * scheduler.last_epoch / scheduler.T_max))
+                        / 2.0
+                    )
+                group["lr"] = lr_val
+                new_lrs.append(lr_val)
+            scheduler._last_lr = new_lrs
     initial_step, initial_tokens = step, tokens_seen
     durations = []
     losses = []
@@ -476,8 +515,9 @@ def run(args):
                         dtype = torch.float16 if args.precision == "fp16" else torch.bfloat16
                         corrupt_prob = float(getattr(args, "input_corrupt_prob", 0.0) or 0.0)
                         if corrupt_prob > 0.0:
-                            corrupt_mask = (torch.rand(batch.shape, device=device, dtype=torch.float32) < corrupt_prob) & (batch >= 4)
-                            noise_ids = torch.randint(4, cfg.vocab_size, batch.shape, device=device, dtype=batch.dtype)
+                            min_non_special_id = min(5, config.vocab_size - 1)
+                            corrupt_mask = (torch.rand(batch.shape, device=device, dtype=torch.float32) < corrupt_prob) & (batch >= min_non_special_id)
+                            noise_ids = torch.randint(min_non_special_id, config.vocab_size, batch.shape, device=device, dtype=batch.dtype)
                             inputs = torch.where(corrupt_mask, noise_ids, batch)
                         else:
                             inputs = batch
@@ -579,6 +619,7 @@ def parse_args():
     p.add_argument("--allow-cross-backend", action="store_true", help="Allow resuming from a TPU v2 checkpoint")
     p.add_argument("--allow-bulk-manifest", action="store_true", help="Allow bulk uint16 manifests and full session bounds")
     p.add_argument("--reset-data-cursor", action="store_true", help="Reset sequence cursor to 0 when starting a new bulk shard pack")
+    p.add_argument("--reset-lr-schedule", action="store_true", help="Start a fresh cosine LR cycle over the current run while keeping AdamW moments")
     p.add_argument("--skip-checksum-verify", action="store_true", help="Skip full-file SHA256/memmap scan on pre-verified bulk shards")
     p.add_argument("--input-corrupt-prob", type=float, default=0.0, help="NCM-inspired conditioning corruption rate (e.g. 0.03) on non-special input tokens while keeping target labels clean")
     args = p.parse_args()

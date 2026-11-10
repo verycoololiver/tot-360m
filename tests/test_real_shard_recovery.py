@@ -190,20 +190,25 @@ class TestRealShardRecovery(unittest.TestCase):
         with open(self.runner_py, "w", encoding="utf-8") as f:
             f.write(RUNNER_SCRIPT)
 
-        # Locate real uint16 shard 0
-        root = Path(__file__).resolve().parents[2]
-        self.real_shard = str(root / "tot_360m" / "data" / "shards" / "shard_000.bin")
-        self.assertTrue(os.path.exists(self.real_shard), f"Real shard not found: {self.real_shard}")
+        # Locate real uint16 shard 0 (check repo_root/data/shards first, then legacy tot_360m/data/shards)
+        repo_root = Path(__file__).resolve().parents[1]
+        cand_a = repo_root / "data" / "shards" / "shard_000.bin"
+        cand_b = repo_root.parent / "tot_360m" / "data" / "shards" / "shard_000.bin"
+        self.real_shard = str(cand_a if cand_a.exists() else cand_b)
 
     def test_real_shard_fresh_process_recovery(self):
         """Execute control vs interrupted + resumed run on real uint16 32k shards."""
+        if not os.path.exists(self.real_shard):
+            self.skipTest(f"Local production shard not present in clean checkout: {self.real_shard}")
         ckpt_path = os.path.join(self.tmp_dir, "real_step2.pt")
         control_json = os.path.join(self.tmp_dir, "control.json")
         phase1_json = os.path.join(self.tmp_dir, "phase1.json")
         phase2_json = os.path.join(self.tmp_dir, "phase2.json")
 
         env = os.environ.copy()
-        env["PYTHONPATH"] = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+        parent_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+        existing_pp = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = f"{parent_root}{os.pathsep}{existing_pp}" if existing_pp else parent_root
 
         # 1. Control run: 4 steps uninterrupted
         res_ctrl = subprocess.run(

@@ -78,7 +78,17 @@ class GPUCandidateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_manifest(root, TotMiniConfig(), 16, fixture=True)
 
-    def invoke(self, data, output, max_steps, resume=None, precision="fp32", ddp=False, max_tokens=1000):
+    def _subproc_env(self):
+        env = os.environ.copy()
+        parent_root = str(Path(__file__).resolve().parents[2])
+        existing_pp = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = f"{parent_root}{os.pathsep}{existing_pp}" if existing_pp else parent_root
+        env["OMP_NUM_THREADS"] = "2"
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["USE_LIBUV"] = "0"  # Windows CPU wheel lacks libuv; Linux CUDA probe is separate.
+        return env
+
+    def invoke(self, data, output, max_steps, resume=None, precision="fp32", ddp=False, max_tokens=1000, extra_args=None):
         args = ["-m", "tot_360m.src.train_gpu_calibration", "--config", "mini", "--device", "cpu", "--fixture",
                 "--precision", precision, "--data-dir", str(data), "--output-dir", str(output),
                 "--seq-len", "16", "--batch-size", "1" if ddp else "2", "--grad-accum-steps", "1",
@@ -87,11 +97,9 @@ class GPUCandidateTests(unittest.TestCase):
                 "--record-batch-ids"]
         if resume:
             args += ["--resume", str(resume)]
-        env = os.environ.copy()
-        env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
-        env["OMP_NUM_THREADS"] = "2"
-        env["PYTHONIOENCODING"] = "utf-8"
-        env["USE_LIBUV"] = "0"  # Windows CPU wheel lacks libuv; Linux CUDA probe is separate.
+        if extra_args:
+            args += list(extra_args)
+        env = self._subproc_env()
         if ddp:
             # Windows's wheel cannot launch TCPStore's libuv path. Explicit
             # CPU-only FileStore tests DDP logic without changing the CUDA route.
@@ -181,7 +189,7 @@ class GPUCandidateTests(unittest.TestCase):
             "--max-seconds", "180", "--save-margin", "5", "--save-interval", "1", "--warmup-steps", "1",
             "--resume", str(tpu_ckpt), "--allow-cross-backend",
         ]
-        env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[2]), OMP_NUM_THREADS="2")
+        env = self._subproc_env()
         p = subprocess.run(args, capture_output=True, text=True, env=env, timeout=180)
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
         gpu_final = torch.load(gpu_out / "final.pt", map_location="cpu", weights_only=False)
@@ -237,7 +245,7 @@ class GPUCandidateTests(unittest.TestCase):
         )
         # Deliberately pass --schedule-steps 10 (< step 50) to verify auto-expansion on cross-backend bulk resume
         gpu_out1 = self.root / "gpu_hop1"
-        env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[2]), OMP_NUM_THREADS="2")
+        env = self._subproc_env()
         p1 = subprocess.run([
             sys.executable, "-m", "tot_360m.src.train_gpu_calibration",
             "--config", "mini", "--device", "cpu", "--fixture", "--precision", "fp32",
@@ -278,6 +286,28 @@ class GPUCandidateTests(unittest.TestCase):
         # Together, TPU (16) + GPU Hop 1 (8) + GPU Hop 2 (8) must cover all 32 sequences with zero duplicates
         all_32 = tpu_consumed | set(hop1_ids) | set(hop2_ids)
         self.assertEqual(len(all_32), 32)
+
+    def test_input_corrupt_prob_and_reset_lr_schedule(self):
+        data = make_fixture(self.root / "corrupt_gpu_data")
+        _, first = self.invoke(
+            data,
+            self.root / "gpu_corrupt_first",
+            2,
+            precision="fp32",
+            extra_args=["--input-corrupt-prob", "0.5"],
+        )
+        self.assertEqual(first["step"], 2)
+        resumed, second = self.invoke(
+            data,
+            self.root / "gpu_corrupt_resumed",
+            1,
+            resume=self.root / "gpu_corrupt_first/final.pt",
+            precision="fp32",
+            extra_args=["--input-corrupt-prob", "0.5", "--reset-lr-schedule", "--lr", "2e-4"],
+        )
+        self.assertEqual(second["step"], 3)
+        self.assertEqual(resumed["steps_this_run"], 1)
+        self.assertGreaterEqual(second["scheduler_state"]["T_max"], 100)
 
 
 if __name__ == "__main__":

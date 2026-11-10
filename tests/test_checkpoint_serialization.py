@@ -118,7 +118,9 @@ class TestCheckpointSerialization(unittest.TestCase):
             script = root / 'runner.py'
             script.write_text(RUNNER, encoding='utf-8')
             env = os.environ.copy()
-            env['PYTHONPATH'] = str(Path(__file__).resolve().parents[2])
+            parent_root = str(Path(__file__).resolve().parents[2])
+            existing_pp = env.get('PYTHONPATH', '')
+            env['PYTHONPATH'] = f"{parent_root}{os.pathsep}{existing_pp}" if existing_pp else parent_root
             def run(mode, ckpt, serialization):
                 output = root / (ckpt.stem + '-' + mode + '.json')
                 result = subprocess.run([sys.executable, str(script), mode,

@@ -183,7 +183,9 @@ class TestCheckpointRecovery(unittest.TestCase):
         phase2_json = os.path.join(self.tmp_dir, "phase2.json")
 
         env = os.environ.copy()
-        env["PYTHONPATH"] = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+        parent_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+        existing_pp = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = f"{parent_root}{os.pathsep}{existing_pp}" if existing_pp else parent_root
 
         # 1. Run uninterrupted control with 30s timeout
         res_ctrl = subprocess.run(
@@ -291,6 +293,39 @@ class TestCheckpointRecovery(unittest.TestCase):
                 config=config_full,
             )
         self.assertIn("fingerprint mismatch", str(ctx.exception))
+
+    def test_legacy_rope_context_expansion_compatibility(self):
+        """Verify loading a 2048-context checkpoint into a 4096-context config works on Python < 3.13."""
+        import dataclasses
+        ckpt_path = os.path.join(self.tmp_dir, "legacy_2048_test.pt")
+        cfg_2048 = dataclasses.replace(TotMiniConfig(), max_position_embeddings=2048)
+        cfg_4096 = dataclasses.replace(TotMiniConfig(), max_position_embeddings=4096)
+
+        model_2048 = TotForCausalLM(cfg_2048)
+        opt_2048 = AdamW(model_2048.parameters(), lr=1e-3)
+        sched_2048 = CosineAnnealingLR(opt_2048, T_max=10)
+        save_checkpoint(
+            checkpoint_path=ckpt_path,
+            step=7,
+            model=model_2048,
+            optimizer=opt_2048,
+            scheduler=sched_2048,
+            config=cfg_2048,
+            data_state={"tokens_seen": 1234},
+        )
+
+        model_4096 = TotForCausalLM(cfg_4096)
+        opt_4096 = AdamW(model_4096.parameters(), lr=1e-3)
+        sched_4096 = CosineAnnealingLR(opt_4096, T_max=10)
+        step, data_state, _ = load_checkpoint(
+            checkpoint_path=ckpt_path,
+            model=model_4096,
+            optimizer=opt_4096,
+            scheduler=sched_4096,
+            config=cfg_4096,
+        )
+        self.assertEqual(step, 7)
+        self.assertEqual(data_state["tokens_seen"], 1234)
 
 
 if __name__ == "__main__":

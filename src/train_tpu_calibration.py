@@ -615,8 +615,9 @@ def train_worker(rank: int, args: argparse.Namespace, t_session_start: float):
                 labels = input_ids.clone()
                 corrupt_prob = float(getattr(args, "input_corrupt_prob", 0.0) or 0.0)
                 if corrupt_prob > 0.0:
-                    corrupt_mask = (torch.rand(input_ids.shape, device=device, dtype=torch.float32) < corrupt_prob) & (input_ids >= 4)
-                    noise_ids = torch.randint(4, config.vocab_size, input_ids.shape, device=device, dtype=input_ids.dtype)
+                    min_non_special_id = min(5, config.vocab_size - 1)
+                    corrupt_mask = (torch.rand(input_ids.shape, device=device, dtype=torch.float32) < corrupt_prob) & (input_ids >= min_non_special_id)
+                    noise_ids = torch.randint(min_non_special_id, config.vocab_size, input_ids.shape, device=device, dtype=input_ids.dtype)
                     input_ids = torch.where(corrupt_mask, noise_ids, input_ids)
                     del corrupt_mask, noise_ids
 
@@ -812,6 +813,7 @@ def train_worker(rank: int, args: argparse.Namespace, t_session_start: float):
     end_to_end_tok_s = (tokens_trained_this_run / max(total_elapsed, 1e-4)) if total_elapsed > 0 else 0.0
 
     if is_master:
+        final_ckpt_sha256 = compute_file_sha256(final_ckpt) if os.path.exists(final_ckpt) else None
         summary = {
             "status": "COMPLETED",
             "global_step": global_step,
@@ -824,6 +826,7 @@ def train_worker(rank: int, args: argparse.Namespace, t_session_start: float):
             "end_to_end_targets_per_sec": round(end_to_end_tok_s, 1),
             "checkpoints_saved": ckpt_counter + 1,
             "final_checkpoint_path": final_ckpt,
+            "final_checkpoint_sha256": final_ckpt_sha256,
             "final_cursor": data_state["rank_cursors"],
             "config_fingerprint": get_config_fingerprint(config, optimizer.__class__.__name__),
         }
@@ -841,6 +844,7 @@ def train_worker(rank: int, args: argparse.Namespace, t_session_start: float):
         print(f"End-to-End Rate:      {end_to_end_tok_s:.1f} targets/sec")
         print(f"Final Loss:           {last_step_loss:.4f}")
         print(f"Final Checkpoint:     {final_ckpt}")
+        print(f"Checkpoint SHA256:    {final_ckpt_sha256}")
         print(f"Summary Saved:        {summary_path}")
         print("==========================================\n")
 

@@ -16,7 +16,7 @@ Features:
     <|im_end|>     : ID 2
     <unk>          : ID 3
     <pad>          : ID 4
-- Digits(individual_digits=True) + ByteLevel pre-tokenizer matching stock llama.cpp qwen2/qwen3
+- ByteLevel(add_prefix_space=False, use_regex=True) pre-tokenizer matching stock llama.cpp gpt-2 / qwen3
 - Full provenance manifest with SHA256 hashes, license distribution, and undercollection checks
 """
 
@@ -30,7 +30,7 @@ from typing import Iterator, List, Dict, Any, Tuple
 
 from tokenizers import Tokenizer
 from tokenizers.models import BPE
-from tokenizers.pre_tokenizers import ByteLevel, Digits, Sequence
+from tokenizers.pre_tokenizers import ByteLevel
 from tokenizers.decoders import ByteLevel as ByteLevelDecoder
 from tokenizers.trainers import BpeTrainer
 from tokenizers.processors import ByteLevel as ByteLevelProcessor

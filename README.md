@@ -89,7 +89,7 @@ tot-360m/
 │   ├── export_gguf.py               # Direct PyTorch-to-GGUF exporter (llama.cpp qwen3 layout)
 │   ├── package_for_kaggle.py        # Bundles source + tokenizer for Kaggle TPU dataset attachment
 │   └── probe_quantizer.py           # 256-element GGUF quantization block alignment analyzer
-├── models/                          # Calibration summaries for Run 1, Run 2, and Run 3
+├── models/                          # Calibration summaries for completed pretraining batches (Runs 1–7+)
 └── tests/                           # Unit tests for architecture, BF16/FP16 SDPA, checkpoint recovery & TPU runner
 ```
 

@@ -249,6 +249,73 @@ class TestTPURunnerLogic(unittest.TestCase):
         self.assertEqual(ckpt2["data_state"]["rank_cursors"]["0"]["seq_offset"], 10)
         self.assertEqual(ckpt2["data_state"]["global_seqs_consumed_in_pack"], 10)
 
+    def test_input_corrupt_prob_protects_special_tokens_and_records_ckpt_sha256(self):
+        """Verify --input-corrupt-prob preserves special IDs 0..4 (including <pad>=4) and records final_checkpoint_sha256."""
+        import hashlib
+        import numpy as np
+        from unittest.mock import patch
+        from tot_360m.src.model import TotForCausalLM
+
+        # Build a shard containing special tokens 0..4 and regular tokens >= 5
+        special_and_regular = np.zeros((20, 32), dtype=np.uint16)
+        special_and_regular[:, :5] = np.array([0, 1, 2, 3, 4], dtype=np.uint16)
+        special_and_regular[:, 5:] = 42
+        corrupt_data_dir = os.path.join(self.temp_dir, "corrupt_data")
+        os.makedirs(os.path.join(corrupt_data_dir, "shards"), exist_ok=True)
+        raw_bytes = special_and_regular.astype("<u2").tobytes()
+        shard_p = os.path.join(corrupt_data_dir, "shards", "shard_000.bin")
+        with open(shard_p, "wb") as f:
+            f.write(raw_bytes)
+        manifest = {
+            "vocab_size": 1000,
+            "seq_len": 32,
+            "dtype": "uint16",
+            "tokenizer_json_sha256": "synthetic-fixture",
+            "shards": [{"name": "shards/shard_000.bin", "seq_count": 20, "sha256": hashlib.sha256(raw_bytes).hexdigest()}],
+        }
+        with open(os.path.join(corrupt_data_dir, "manifest.json"), "w", encoding="utf-8") as f:
+            json.dump(manifest, f)
+
+        seen_inputs = []
+        seen_labels = []
+        orig_forward = TotForCausalLM.forward
+
+        def spy_forward(model_self, input_ids, **kwargs):
+            seen_inputs.append(input_ids.detach().cpu().clone())
+            if kwargs.get("labels") is not None:
+                seen_labels.append(kwargs["labels"].detach().cpu().clone())
+            return orig_forward(model_self, input_ids=input_ids, **kwargs)
+
+        out_dir = os.path.join(self.temp_dir, "corrupt_out")
+        args = DummyArgs(corrupt_data_dir, out_dir)
+        args.allow_synthetic_shards = False
+        args.allow_tokenizer_mismatch = True
+        args.vocab_size_override = 1000
+        args.batch_size = 2
+        args.grad_accum_steps = 1
+        args.max_tokens = 124  # 2 steps * 62 targets
+        args.input_corrupt_prob = 1.0  # Corrupt 100% of eligible tokens to test boundary deterministically
+
+        with patch.object(TotForCausalLM, "forward", spy_forward):
+            train_worker(0, args, t_session_start=time.time())
+
+        self.assertGreaterEqual(len(seen_inputs), 2)
+        for inp, lbl in zip(seen_inputs, seen_labels):
+            # Labels must remain 100% clean (uncorrupted)
+            self.assertTrue(torch.equal(lbl[:, :5], torch.tensor([[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]])))
+            self.assertTrue((lbl[:, 5:] == 42).all())
+            # Special tokens 0..4 (including <pad>=4) must NEVER be corrupted in input_ids
+            self.assertTrue(torch.equal(inp[:, :5], torch.tensor([[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]])))
+            # Replacement noise tokens on non-special positions must all be >= 5
+            self.assertTrue((inp[:, 5:] >= 5).all())
+
+        summary_path = os.path.join(out_dir, "calibration_summary.json")
+        with open(summary_path, "r", encoding="utf-8") as f:
+            summary = json.load(f)
+        final_ckpt = summary["final_checkpoint_path"]
+        expected_sha = hashlib.sha256(open(final_ckpt, "rb").read()).hexdigest()
+        self.assertEqual(summary["final_checkpoint_sha256"], expected_sha)
+
 
 if __name__ == "__main__":
     unittest.main()

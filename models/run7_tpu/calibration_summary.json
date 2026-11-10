@@ -10,6 +10,7 @@
   "end_to_end_targets_per_sec": 16831.8,
   "checkpoints_saved": 3,
   "final_checkpoint_path": "/kaggle/working/checkpoints/bulk_b7_tpu/tot_360m_calibration_final.pt",
+  "final_checkpoint_sha256": "445a878ef94de06b60b307a3a2586f3574480fea665636c7f584d6489ee26ac1",
   "final_cursor": {
     "0": {
       "shard_idx": 6,

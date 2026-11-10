@@ -12,7 +12,7 @@ from tot_360m.tokenizer.build_production_tokenizer import SPECIAL_TOKENS, TARGET
 class TestProductionTokenizer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tok_path = Path("tot_360m/tokenizer/production/tokenizer.json")
+        cls.tok_path = Path(__file__).resolve().parent / "production" / "tokenizer.json"
         if not cls.tok_path.exists():
             raise unittest.SkipTest("Production tokenizer not built yet. Run build_production_tokenizer.py first.")
         cls.tokenizer = Tokenizer.from_file(str(cls.tok_path))

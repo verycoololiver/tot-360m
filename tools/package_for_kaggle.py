@@ -7,31 +7,37 @@ from pathlib import Path
 
 
 def main():
-    root = Path(__file__).resolve().parents[2]
-    out_dir = root / "qa" / "kaggle_bundle"
+    repo_root = Path(__file__).resolve().parents[1]
+    out_dir = repo_root / "qa" / "kaggle_bundle"
     out_dir.mkdir(parents=True, exist_ok=True)
     tar_path = out_dir / "tot_360m_package.tar.gz"
 
-    files_to_pack = [
-        "tot_360m/config.py",
-        "tot_360m/src/model.py",
-        "tot_360m/src/checkpoint.py",
-        "tot_360m/src/train_tpu_calibration.py",
-        "tot_360m/tokenizer/production/tokenizer.json",
-        "tot_360m/data/manifest.json",
-        "tot_360m/tools/codex_runner_safety.py",
+    required_rel_files = [
+        "__init__.py",
+        "config.py",
+        "src/__init__.py",
+        "src/model.py",
+        "src/checkpoint.py",
+        "src/train_tpu_calibration.py",
+        "src/train_gpu_calibration.py",
+        "tools/export_gguf.py",
+        "tools/probe_quantizer.py",
+        "tokenizer/production/tokenizer.json",
+        "tokenizer/production/manifest.json",
     ]
 
-    # Add all 16 shards
-    for i in range(16):
-        files_to_pack.append(f"tot_360m/data/shards/shard_{i:03d}.bin")
+    optional_rel_files = ["data/manifest.json"] + [f"data/shards/shard_{i:03d}.bin" for i in range(16)]
+    files_to_pack = list(required_rel_files)
+    for rel in optional_rel_files:
+        if (repo_root / rel).exists():
+            files_to_pack.append(rel)
 
     print(f"Packaging {len(files_to_pack)} verified assets into {tar_path}...")
     with tarfile.open(tar_path, "w:gz", compresslevel=6) as tar:
         for rel_path in files_to_pack:
-            abs_p = root / rel_path
+            abs_p = repo_root / rel_path
             assert abs_p.exists(), f"Missing required file: {abs_p}"
-            tar.add(abs_p, arcname=rel_path)
+            tar.add(abs_p, arcname=f"tot_360m/{rel_path}")
 
     tar_size = tar_path.stat().st_size
     h = hashlib.sha256(tar_path.read_bytes()).hexdigest()

@@ -24,12 +24,21 @@ Homepage = "https://obstudio.org/tot-360m/"
 Documentation = "https://obstudio.org/tot-360m/"
 Repository = "https://github.com/verycoololiver/tot-360m"
 
+[tool.setuptools]
+packages = [
+  "tot_360m",
+  "tot_360m.src",
+  "tot_360m.tools",
+  "tot_360m.tokenizer",
+  "tot_360m.tests",
+]
+
 [tool.setuptools.package-dir]
 tot_360m = "."
-
-[tool.setuptools.packages.find]
-where = [".."]
-include = ["tot_360m*"]
+"tot_360m.src" = "src"
+"tot_360m.tools" = "tools"
+"tot_360m.tokenizer" = "tokenizer"
+"tot_360m.tests" = "tests"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

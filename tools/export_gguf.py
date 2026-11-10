@@ -10,11 +10,24 @@ import os
 import sys
 import json
 import argparse
+import importlib.util
+from pathlib import Path
 import numpy as np
 import torch
 import gguf
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT.parent) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT.parent))
+if "tot_360m" not in sys.modules and not (_REPO_ROOT.parent / "tot_360m").exists():
+    _spec = importlib.util.spec_from_file_location(
+        "tot_360m", _REPO_ROOT / "__init__.py", submodule_search_locations=[str(_REPO_ROOT)]
+    )
+    if _spec and _spec.loader:
+        _mod = importlib.util.module_from_spec(_spec)
+        sys.modules["tot_360m"] = _mod
+        _spec.loader.exec_module(_mod)
+
 from tot_360m.config import Tot360MConfig, TotMiniConfig
 from tot_360m.src.model import TotForCausalLM
 
@@ -32,12 +45,19 @@ def export_model_to_gguf(
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     writer = gguf.GGUFWriter(output_path, "qwen3")
 
-    # Only fall back to the dev tokenizer when the caller kept the default path. An explicitly
-    # requested path must never be silently swapped for a different tokenizer.
+    # Only fall back to repo-relative or dev tokenizer when the caller kept the default path.
+    # An explicitly requested path must never be silently swapped for a different tokenizer.
     default_tok = "tot_360m/tokenizer/production/tokenizer.json"
+    repo_prod_tok = str(_REPO_ROOT / "tokenizer" / "production" / "tokenizer.json")
+    repo_dev_tok = str(_REPO_ROOT / "tokenizer" / "output" / "tokenizer.json")
     dev_tok = "tot_360m/tokenizer/output/tokenizer.json"
-    if tokenizer_json_path == default_tok and not os.path.exists(default_tok) and os.path.exists(dev_tok):
-        tokenizer_json_path = dev_tok
+    if tokenizer_json_path == default_tok and not os.path.exists(default_tok):
+        if os.path.exists(repo_prod_tok):
+            tokenizer_json_path = repo_prod_tok
+        elif os.path.exists(dev_tok):
+            tokenizer_json_path = dev_tok
+        elif os.path.exists(repo_dev_tok):
+            tokenizer_json_path = repo_dev_tok
 
     # 1. Architecture Hyperparameters
     writer.add_block_count(config.num_hidden_layers)
